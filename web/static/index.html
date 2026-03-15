@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synthetic Data Seeder</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4f;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --danger: #f85149;
+      --success: #3fb950;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      margin: 0 0 0.75rem 0;
+      color: var(--muted);
+    }
+
+    .dropzone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .dropzone:hover,
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.06);
+    }
+
+    .dropzone input {
+      display: none;
+    }
+
+    .dropzone p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .file-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .file-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0.75rem;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+    }
+
+    .file-list li .name {
+      font-size: 0.9rem;
+    }
+
+    .file-list li .meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.7rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .badge-srs {
+      background: rgba(88, 166, 255, 0.2);
+      color: var(--accent);
+    }
+
+    .badge-schema {
+      background: rgba(63, 185, 80, 0.2);
+      color: var(--success);
+    }
+
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-delete {
+      background: rgba(248, 81, 73, 0.2);
+      color: var(--danger);
+    }
+
+    .btn-delete:hover {
+      background: rgba(248, 81, 73, 0.35);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      padding: 0.65rem 1.25rem;
+      font-weight: 600;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .form-row {
+      margin-bottom: 1rem;
+    }
+
+    .form-row label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-row select {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .form-row select option {
+      background: var(--surface);
+    }
+
+    .generate-section {
+      margin-top: 1.5rem;
+    }
+
+    .generate-section .btn-primary {
+      width: 100%;
+    }
+
+    .message {
+      margin-top: 1rem;
+      padding: 0.6rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+
+    .message.error {
+      background: rgba(248, 81, 73, 0.15);
+      color: var(--danger);
+    }
+
+    .message.success {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--success);
+    }
+
+    .empty {
+      color: var(--muted);
+      font-size: 0.9rem;
+      padding: 1rem 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Synthetic Data Seeder</h1>
+    <p class="subtitle">Upload SRS (PDF/TXT) and schema (SQL/JSON), then generate a seeder file.</p>
+
+    <div class="card">
+      <h2>Upload files</h2>
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="fileInput" accept=".pdf,.txt,.sql,.json" multiple />
+        <p>Drop files here or click to upload</p>
+        <p style="margin-top: 0.5rem;">SRS: .pdf, .txt &nbsp;|&nbsp; Schema: .sql, .json</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Uploaded files</h2>
+      <ul class="file-list" id="fileList"></ul>
+      <p class="empty" id="emptyMsg">No files yet. Upload SRS or schema files above.</p>
+    </div>
+
+    <div class="card">
+      <h2>Generate seeder</h2>
+      <div class="form-row">
+        <label for="srsSelect">SRS file (PDF or TXT)</label>
+        <select id="srsSelect">
+          <option value="">— Select SRS —</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label for="schemaSelect">Schema file (SQL or JSON)</label>
+        <select id="schemaSelect">
+          <option value="">— Select schema —</option>
+        </select>
+      </div>
+      <div class="generate-section">
+        <button type="button" class="btn btn-primary" id="generateBtn" disabled>Generate seeder file</button>
+      </div>
+      <div id="message"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = "/api";
+    const fileListEl = document.getElementById("fileList");
+    const emptyMsg = document.getElementById("emptyMsg");
+    const srsSelect = document.getElementById("srsSelect");
+    const schemaSelect = document.getElementById("schemaSelect");
+    const generateBtn = document.getElementById("generateBtn");
+    const dropzone = document.getElementById("dropzone");
+    const fileInput = document.getElementById("fileInput");
+    const messageEl = document.getElementById("message");
+
+    function showMessage(text, type) {
+      messageEl.textContent = text;
+      messageEl.className = "message " + (type || "");
+      messageEl.style.display = text ? "block" : "none";
+    }
+
+    async function fetchFiles() {
+      const res = await fetch(API + "/files");
+      if (!res.ok) throw new Error("Failed to list files");
+      return res.json();
+    }
+
+    function renderFiles(files) {
+      fileListEl.innerHTML = "";
+      const srsFiles = files.filter(f => f.type === "srs");
+      const schemaFiles = files.filter(f => f.type === "schema");
+
+      srsSelect.innerHTML = '<option value="">— Select SRS —</option>' +
+        srsFiles.map(f => `<option value="${f.filename}">${f.original_name}</option>`).join("");
+      schemaSelect.innerHTML = '<option value="">— Select schema —</option>' +
+        schemaFiles.map(f => `<option value="${f.filename}">${f.original_name}</option>`).join("");
+
+      if (files.length === 0) {
+        emptyMsg.style.display = "block";
+        generateBtn.disabled = true;
+        return;
+      }
+      emptyMsg.style.display = "none";
+      files.forEach(f => {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <span class="name">${escapeHtml(f.original_name)}</span>
+          <span class="meta">
+            <span class="badge badge-${f.type}">${f.type}</span>
+            <button type="button" class="btn btn-delete" data-id="${escapeHtml(f.filename)}">Delete</button>
+          </span>
+        `;
+        li.querySelector(".btn-delete").onclick = () => deleteFile(f.filename);
+        fileListEl.appendChild(li);
+      });
+      generateBtn.disabled = !srsFiles.length || !schemaFiles.length;
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement("div");
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    async function loadFiles() {
+      try {
+        const files = await fetchFiles();
+        renderFiles(files);
+      } catch (e) {
+        showMessage("Could not load file list: " + e.message, "error");
+      }
+    }
+
+    async function upload(files) {
+      for (const file of files) {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(API + "/upload", { method: "POST", body: form });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: res.statusText }));
+          throw new Error(err.detail || "Upload failed");
+        }
+      }
+      await loadFiles();
+    }
+
+    async function deleteFile(filename) {
+      if (!confirm("Delete this file?")) return;
+      const res = await fetch(API + "/files/" + encodeURIComponent(filename), { method: "DELETE" });
+      if (!res.ok) throw new Error("Delete failed");
+      await loadFiles();
+    }
+
+    dropzone.onclick = () => fileInput.click();
+    dropzone.ondragover = (e) => { e.preventDefault(); dropzone.classList.add("dragover"); };
+    dropzone.ondragleave = () => dropzone.classList.remove("dragover");
+    dropzone.ondrop = (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      const files = Array.from(e.dataTransfer.files).filter(f =>
+        /\.(pdf|txt|sql|json)$/i.test(f.name)
+      );
+      if (files.length) upload(files).catch(err => showMessage(err.message, "error"));
+    };
+    fileInput.onchange = () => {
+      const files = Array.from(fileInput.files);
+      fileInput.value = "";
+      if (files.length) upload(files).catch(err => showMessage(err.message, "error"));
+    };
+
+    generateBtn.onclick = async () => {
+      const srs = srsSelect.value;
+      const schema = schemaSelect.value;
+      if (!srs || !schema) return;
+      showMessage("Generating…", "");
+      generateBtn.disabled = true;
+      try {
+        const res = await fetch(API + "/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ srs_filename: srs, schema_filename: schema }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(async () => ({ detail: await res.text() }));
+          throw new Error(err.detail || "Generate failed");
+        }
+        const blob = await res.blob();
+        const name = res.headers.get("Content-Disposition")?.match(/filename="?([^";]+)"?/)?.[1] || "seed.sql";
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showMessage("Seeder file downloaded.", "success");
+      } catch (e) {
+        showMessage(e.message, "error");
+      } finally {
+        generateBtn.disabled = false;
+      }
+    };
+
+    loadFiles();
+  </script>
+</body>
+
+</html>

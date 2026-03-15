@@ -1,0 +1,6 @@
+Test SRS for order statuses.
+Entities:
+- customer_type enum [regular, premium]
+- order status enum [pending, processing, shipped, delivered, cancelled]
+- payment_status enum [unpaid, paid, refunded]
+Notes: fields are required and non-empty.

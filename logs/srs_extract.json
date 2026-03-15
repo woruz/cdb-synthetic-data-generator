@@ -1,0 +1,96 @@
+{
+  "entities": [
+    {
+      "name": "customer_type",
+      "fields": [],
+      "description": "enum with regular or premium customers",
+      "state_fields": {}
+    },
+    {
+      "name": "order status",
+      "fields": [],
+      "description": "enum with pending, processed, shipped, delivered, cancelled",
+      "state_fields": {}
+    }
+  ],
+  "relationships": [
+    {
+      "from_entity": "customer_type",
+      "to_entity": "order_status",
+      "relationship_type": "one-to-one",
+      "from_field": null,
+      "to_field": null,
+      "description": null
+    },
+    {
+      "from_entity": "order_status",
+      "to_entity": "payment_status",
+      "relationship_type": "many-to-many",
+      "from_field": null,
+      "to_field": null,
+      "description": null
+    }
+  ],
+  "state_machines": [
+    {
+      "entity_or_field": "customer_type",
+      "states": [
+        "pending",
+        "processing",
+        "shipped",
+        "delivered"
+      ],
+      "description": null
+    },
+    {
+      "entity_or_field": "order_status",
+      "states": [
+        "paid",
+        "refunded"
+      ],
+      "description": null
+    }
+  ],
+  "workflows": [],
+  "constraints": [],
+  "roles": [
+    {
+      "name": "admin",
+      "permissions_or_scope": [],
+      "description": null
+    },
+    {
+      "name": "customer_type",
+      "permissions_or_scope": [],
+      "description": null
+    },
+    {
+      "name": "customer_type",
+      "permissions_or_scope": [],
+      "description": null
+    },
+    {
+      "name": "order_status",
+      "permissions_or_scope": [],
+      "description": null
+    },
+    {
+      "name": "payment_status",
+      "permissions_or_scope": [],
+      "description": null
+    }
+  ],
+  "enums": {
+    "status": [
+      "paid",
+      "refunded"
+    ],
+    "state": [
+      "pending",
+      "processing",
+      "shipped",
+      "delivered",
+      "cancelled"
+    ]
+  }
+}

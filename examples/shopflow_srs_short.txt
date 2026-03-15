@@ -1,0 +1,16 @@
+ShopFlow (Synthetic) SRS Summary
+
+Entities:
+- Tenant: posture enum [active, suspended, closed]
+- Store: status enum [active, maintenance, disabled]
+- Customer: email unique, full_name required
+- Order: status enum [draft, pending, confirmed, packed, shipped, delivered, returned, cancelled]
+- Payment: payment_status enum [unpaid, authorized, captured, refunded, chargeback]
+
+Rules:
+- Each store belongs to one tenant.
+- Each customer belongs to one tenant.
+- Each order belongs to one tenant, one store, and one customer.
+- Each payment belongs to one order.
+- All status enums must use allowed values only.
+- totals/amount are NUMERIC(10,2) and must be within DB bounds.

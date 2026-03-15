@@ -1,0 +1,68 @@
+{
+  "tenants": {
+    "properties": {
+      "tenant_id": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "name": {
+        "type": "string",
+        "maxLength": 120
+      },
+      "posture": {
+        "type": "string",
+        "enum": [
+          "active",
+          "suspended",
+          "closed"
+        ]
+      },
+      "created_at": {
+        "type": "string",
+        "maxLength": 64
+      }
+    },
+    "required": [
+      "tenant_id",
+      "name",
+      "posture"
+    ]
+  },
+  "orders": {
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "maxLength": 64
+      },
+      "tenant_id": {
+        "type": "string",
+        "maxLength": 64,
+        "ref": "tenants.tenant_id"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "pending",
+          "confirmed",
+          "packed",
+          "shipped",
+          "delivered",
+          "returned",
+          "cancelled"
+        ]
+      },
+      "total": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 99999999.99
+      }
+    },
+    "required": [
+      "order_id",
+      "tenant_id",
+      "status",
+      "total"
+    ]
+  }
+}
