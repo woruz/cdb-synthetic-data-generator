@@ -18,3 +18,12 @@ build/
 
 # Secrets
 .env
+
+# Logs  
+logs/*
+logs/srs_extract.json
+logs/alignment.json
+logs/seed_plan.json
+
+# examples
+examples/*

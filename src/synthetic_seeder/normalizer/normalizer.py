@@ -16,15 +16,22 @@ try:
 except ImportError:
     SRSStructuredOutput = None  # type: ignore[misc, assignment]
 
+from synthetic_seeder.normalizer.compatibility import (
+    DEFAULT_MIN_COMPATIBILITY,
+    require_srs_schema_compatibility,
+)
+
 
 def normalize_schema(
     schema_content: str,
     db_type_hint: DatabaseType | str = DatabaseType.UNKNOWN,
     srs_output: Any = None,
+    min_srs_compatibility: float = DEFAULT_MIN_COMPATIBILITY,
 ) -> NormalizedSchema:
     """
     Merge parsed DB schema with SRS structured output.
     - Detect or use DB type; parse schema accordingly.
+    - If SRS is provided, require at least min_srs_compatibility (default 80%) match with schema.
     - Enrich tables with SRS entities (states, enums, constraints).
     - Resolve insert order for FKs.
     """
@@ -40,6 +47,11 @@ def normalize_schema(
         normalized = parse_mongo_schema(schema_content)
 
     if srs_output is not None and SRSStructuredOutput is not None:
+        require_srs_schema_compatibility(
+            normalized,
+            srs_output,
+            min_compatibility=min_srs_compatibility,
+        )
         normalized = _merge_srs(normalized, srs_output)
 
     normalized.database_type = db_type

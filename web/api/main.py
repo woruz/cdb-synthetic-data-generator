@@ -108,7 +108,7 @@ class GenerateRequest(BaseModel):
     schema_filename: str
     use_ai: bool = False
     ai_pool_size: int = 10
-    strategy: str = "random"
+    strategy: str = "edge-case"
     llm_provider: str = "openai"
     llm_model: str = "gpt-4.1-mini"
 

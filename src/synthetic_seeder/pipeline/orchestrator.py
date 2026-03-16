@@ -24,6 +24,10 @@ def _log_srs_extract(srs_structured: object, log_path: str) -> None:
 from synthetic_seeder.schema import DatabaseType, NormalizedSchema
 from synthetic_seeder.text_layer import clean_srs_text, extract_text_from_pdf
 from synthetic_seeder.normalizer import normalize_schema
+from synthetic_seeder.graph.builder import build_schema_graph
+from synthetic_seeder.ai_layer.alignment_agent import align_srs_to_schema, AlignmentResult
+from synthetic_seeder.ai_layer.seed_plan_agent import generate_seed_plan
+from synthetic_seeder.generator.plan_models import SeedPlan
 from synthetic_seeder.generator import generate_seed_data
 from synthetic_seeder.validator import validate_rows
 from synthetic_seeder.writer import write_sql_seeder, write_mongo_seeder
@@ -89,7 +93,43 @@ def run_pipeline(
         schema_content,
         db_type_hint=db_hint,
         srs_output=srs_structured,
+        min_srs_compatibility=config.srs_min_compatibility,
     )
+
+    seed_plan: SeedPlan | None = None
+    alignment_result: AlignmentResult | None = None
+    if use_agno and srs_structured is not None and config.use_alignment_ai:
+        try:
+            graph = build_schema_graph(schema)
+            alignment = align_srs_to_schema(
+                srs_structured,
+                schema,
+                llm_provider=config.llm_provider,
+                model_id=config.llm_model,
+            )
+            alignment_result = alignment
+            # Optional: write alignment JSON log next to SRS extract log if configured
+            if config.srs_extract_log_path:
+                log_path = Path(config.srs_extract_log_path)
+                align_path = log_path.with_name("alignment.json")
+                align_path.parent.mkdir(parents=True, exist_ok=True)
+                align_path.write_text(alignment.model_dump_json(indent=2), encoding="utf-8")
+            if config.use_seed_plan_ai:
+                seed_plan = generate_seed_plan(
+                    srs_structured,
+                    alignment,
+                    graph,
+                    llm_provider=config.llm_provider,
+                    model_id=config.llm_model,
+                )
+                # Optional: write seed plan JSON log next to SRS extract log if configured
+                if config.srs_extract_log_path:
+                    log_path = Path(config.srs_extract_log_path)
+                    plan_path = log_path.with_name("seed_plan.json")
+                    plan_path.parent.mkdir(parents=True, exist_ok=True)
+                    plan_path.write_text(seed_plan.model_dump_json(indent=2), encoding="utf-8")
+        except Exception as e:
+            logger.warning("Alignment/seed-plan AI failed; continuing without seed plan: %s", e, exc_info=True)
 
     semantic_pools = None
     if config.generator and config.generator.use_ai_values:
@@ -105,7 +145,7 @@ def run_pipeline(
         except Exception as e:
             logger.warning("Failed to generate semantic AI pools: %s", e)
 
-    rows_by_table = generate_seed_data(schema, config.generator, semantic_pools=semantic_pools)
+    rows_by_table = generate_seed_data(schema, config.generator, semantic_pools=semantic_pools, seed_plan=seed_plan)
     errors = validate_rows(schema, rows_by_table)
     if errors:
         raise ValueError(

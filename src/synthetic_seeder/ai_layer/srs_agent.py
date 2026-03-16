@@ -99,18 +99,14 @@ def extract_srs_structure(
     logger.info("Using model: %s", model_id)
     try:
         from agno.agent import Agent
+        from agno.models.openai import OpenAIResponses
     except ImportError as err:
         raise ImportError(
             "Agno is required for SRS extraction. Install with: pip install agno"
         ) from err
 
-    try:
-        from agno.models.openai import OpenAIResponses
-        model = OpenAIResponses(id=model_id, temperature=0)
-    except ImportError:
-        raise ImportError("Agno OpenAI support not found.")
-
-    logger.info("Initialized Agno %s model for SRS extraction", llm_provider)
+    model = OpenAIResponses(id=model_id, temperature=0)
+    logger.info("Initialized Agno openai model for SRS extraction")
     agent = Agent(
         model=model,
         output_schema=SRSStructuredOutput,

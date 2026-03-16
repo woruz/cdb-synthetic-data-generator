@@ -27,7 +27,7 @@ def main() -> int:
     parser.add_argument(
         "--strategy",
         choices=["random", "edge-case"],
-        default="random",
+        default="edge-case",
         help="Generation strategy: random (fixed row count) or edge-case (coverage-based)",
     )
     parser.add_argument("--rows", type=int, default=1, dest="row_multiplier", help="Row multiplier per table (used when --strategy random)")
@@ -46,8 +46,17 @@ def main() -> int:
         metavar="PATH",
         help="Write Agno SRS extraction (entities, relationships, states, etc.) to this JSON file.",
     )
+    parser.add_argument(
+        "--srs-min-compatibility",
+        type=float,
+        default=0.50,
+        metavar="0.0-1.0",
+        help="Require SRS and schema to be at least this compatible (default 0.5 = 50%%).",
+    )
     parser.add_argument("--use-ai", action="store_true", help="Use AI to generate semantic value pools (realistic names, bios, etc.)")
     parser.add_argument("--ai-pool-size", type=int, default=50, help="Number of semantic values to generate per AI-enabled field")
+    parser.add_argument("--no-align-ai", action="store_true", help="Disable AI-based SRS/schema alignment and use heuristic only")
+    parser.add_argument("--no-seed-plan-ai", action="store_true", help="Disable AI-based seed plan; use default per-table coverage")
     parser.add_argument("--project", default="default", help="Project name")
     args = parser.parse_args()
 
@@ -82,6 +91,9 @@ def main() -> int:
         project_name=args.project,
         srs_max_chars_per_chunk=args.srs_chunk_size,
         srs_extract_log_path=args.srs_extract_log_path,
+        srs_min_compatibility=args.srs_min_compatibility,
+        use_alignment_ai=not args.no_align_ai,
+        use_seed_plan_ai=not args.no_seed_plan_ai,
     )
 
     try:

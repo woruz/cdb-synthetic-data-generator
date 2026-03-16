@@ -12,6 +12,7 @@ from synthetic_seeder.generator.value_gen import (
     gen_value_for_field,
     make_rng,
 )
+from synthetic_seeder.generator.plan_models import SeedPlan
 
 
 def _gen_field_value(
@@ -51,6 +52,7 @@ def generate_seed_data(
     schema: NormalizedSchema,
     config: GeneratorConfig | None = None,
     semantic_pools: dict[str, dict[str, list[Any]]] | None = None,
+    seed_plan: SeedPlan | None = None,
 ) -> dict[str, list[dict[str, Any]]]:
     """
     Generate deterministic seed rows per table.
@@ -70,11 +72,11 @@ def generate_seed_data(
 
     if config.strategy == "edge-case":
         _generate_edge_case(
-            order, table_by_name, table_by_name, pk_values, rows_by_table, config, rng
+            order, table_by_name, table_by_name, pk_values, rows_by_table, config, rng, seed_plan=seed_plan
         )
     else:
         _generate_random(
-            order, table_by_name, pk_values, rows_by_table, config, rng
+            order, table_by_name, pk_values, rows_by_table, config, rng, seed_plan=seed_plan
         )
 
     return dict(rows_by_table)
@@ -87,14 +89,19 @@ def _generate_random(
     rows_by_table: dict[str, list[dict[str, Any]]],
     config: GeneratorConfig,
     rng: Any,
+    seed_plan: SeedPlan | None = None,
 ) -> None:
     """Row-based generation (original behavior)."""
     for table_name in order:
         if table_name not in table_by_name:
             continue
         table = table_by_name[table_name]
+        table_plan = seed_plan.table_plan_for(table_name) if seed_plan else None
         pk_cols = table.primary_key or _infer_pk(table)
-        num_rows = max(1, 2 * config.row_multiplier)
+        if table_plan and table_plan.target_rows > 0:
+            num_rows = table_plan.target_rows
+        else:
+            num_rows = max(1, 2 * config.row_multiplier)
         if config.include_state_variations and table.state_fields:
             num_rows = max(num_rows, 4)
         if config.include_boundary_cases:
@@ -119,23 +126,27 @@ def _generate_edge_case(
     rows_by_table: dict[str, list[dict[str, Any]]],
     config: GeneratorConfig,
     rng: Any,
+    seed_plan: SeedPlan | None = None,
 ) -> None:
     """Coverage-based generation: enum, state, boundary, null, relationship."""
     for table_name in order:
         if table_name not in table_by_name:
             continue
         table = table_by_name[table_name]
+        table_plan = seed_plan.table_plan_for(table_name) if seed_plan else None
         pk_cols = table.primary_key or _infer_pk(table)
-        plan = build_coverage_plan(table, config.min_children_per_parent)
+        min_children = table_plan.min_children_per_parent if table_plan else config.min_children_per_parent
+        plan = build_coverage_plan(table, min_children)
 
         parent_count = 0
         for fk in table.foreign_keys:
             parent_count = len(pk_values.get(fk.target_table, []))
             if parent_count > 0:
                 break
-        num_rows = child_table_coverage_count(
-            parent_count, plan.min_children_per_parent, plan.num_rows
-        )
+        base_rows = plan.num_rows
+        if table_plan and table_plan.target_rows > 0:
+            base_rows = max(base_rows, table_plan.target_rows)
+        num_rows = child_table_coverage_count(parent_count, plan.min_children_per_parent, base_rows)
 
         parent_indices = _distribute_children_over_parents(
             num_rows, parent_count, plan.min_children_per_parent, rng

@@ -2,20 +2,26 @@
 
 Converts **SRS (Software Requirements) text or PDF + Database schema** into a **valid, executable seeder file** for SQL or MongoDB.
 
-## Architecture (hybrid)
+## Architecture (hybrid, multi-stage)
 
-- **AI (Agno agent)** is used **only** to extract structured information from the SRS (entities, relationships, state machines, constraints, roles). The agent returns **strict JSON** (Pydantic); no free-form text.
-- **All data generation, validation, and seeder writing** are **deterministic and rule-based**. No AI is used for generating seed rows.
+- **AI (Agno + OpenAI)** is used in **three places**:
+  - To parse and structure the **SRS** into entities, fields, enums, state machines and constraints (strict JSON).
+  - To **align** SRS entities/fields with actual DB tables/columns (via an alignment agent).
+  - To generate a **high-level seed plan** (scenarios, coverage goals, per-table targets) – but **not concrete row values**.
+- **All concrete data generation, validation, and seeder writing** are **deterministic and rule-based**. No AI is used for the final seed rows.
 
 ## Pipeline
 
 1. **SRS input** – SRS can be **plain text** (`.txt`) or **PDF** (`.pdf`). For PDFs, text is extracted with `pypdf`; Agno then reads the text (no pre-extraction needed).
 2. **Long documents** – For long SRS (e.g. **200-page PDFs**), the text is split into chunks (~80k chars by default). Agno runs on each chunk; results are merged (entities, relationships, state machines, etc.) into one structured output.
 3. **Agno SRS structuring** – An Agno agent (OpenAI, temperature=0) extracts: entities, fields, relationships, enums, state machines, workflows, constraints, roles. Output is a single structured JSON object.
-4. **Schema normalization** – The actual DB schema (SQL DDL or MongoDB JSON) is parsed and merged with the SRS output. Conflicts are resolved; insert order for foreign keys is computed.
-5. **Deterministic generator** – Seed data is generated with a fixed seed: valid rows, boundary values, null/optional cases, unique and FK-safe values, business-state variations.
-6. **Validation** – Generated rows are checked against the normalized schema.
-7. **Seeder writer** – A ready-to-run file is emitted:
+4. **Schema normalization** – The actual DB schema (SQL DDL or MongoDB JSON) is parsed and merged with the SRS output. Conflicts are resolved; insert order for foreign keys is computed and SRS–schema compatibility is checked.
+5. **Alignment AI (optional)** – A separate Agno-based agent aligns SRS entities/fields with schema tables/columns, producing an alignment map. There is a heuristic fallback if AI is disabled.
+6. **Schema relationship graph** – The normalized schema is turned into a graph (tables as nodes, FKs as edges) to understand parent/child relationships.
+7. **Seed plan AI (optional)** – Another agent consumes SRS + alignment + graph and outputs a **SeedPlan**: scenarios plus per-table targets (row counts, enum coverage, boundary/null hints). If disabled or unavailable, a deterministic default SeedPlan is used.
+8. **Deterministic generator** – Seed data is generated with a fixed seed and the SeedPlan: valid rows, boundary values, null/optional cases, unique and FK-safe values, business-state variations.
+9. **Validation** – Generated rows are checked against the normalized schema.
+10. **Seeder writer** – A ready-to-run file is emitted:
    - **SQL**: `INSERT` statements in parent-before-child order.
    - **MongoDB**: script using `insertMany()`.
 

@@ -15,7 +15,7 @@ class GeneratorConfig:
 
     seed: int = 42
     row_multiplier: int = 1
-    strategy: GenerationStrategy = "random"
+    strategy: GenerationStrategy = "edge-case"
     include_null_cases: bool = True
     include_boundary_cases: bool = True
     include_state_variations: bool = True
@@ -42,6 +42,11 @@ class PipelineConfig:
     srs_max_chars_per_chunk: int | None = None
     # If set, write Agno SRS extraction (structured JSON) to this path for inspection.
     srs_extract_log_path: str | None = None
+    # Require SRS and schema to be at least this compatible (0.0–1.0). Default 0.5 (50%).
+    srs_min_compatibility: float = 0.50
+    # Control additional AI-assisted stages
+    use_alignment_ai: bool = True
+    use_seed_plan_ai: bool = True
     llm_provider: str = "openai"
     llm_model: str = "gpt-4.1-mini"
 
