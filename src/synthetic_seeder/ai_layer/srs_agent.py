@@ -99,14 +99,27 @@ def extract_srs_structure(
     logger.info("Using model: %s", model_id)
     try:
         from agno.agent import Agent
-        from agno.models.openai import OpenAIResponses
     except ImportError as err:
         raise ImportError(
             "Agno is required for SRS extraction. Install with: pip install agno"
         ) from err
 
-    model = OpenAIResponses(id=model_id, temperature=0)
-    logger.info("Initialized Agno openai model for SRS extraction")
+    provider = (llm_provider or "openai").strip().lower()
+    if provider == "ollama":
+        try:
+            from agno.models.ollama import Ollama
+        except ImportError as err:
+            raise ImportError("Agno Ollama support is required. Install with: pip install agno") from err
+        model = Ollama(id=model_id or "qwen2:7b")
+        logger.info("Initialized Agno ollama model for SRS extraction")
+    else:
+        try:
+            from agno.models.openai import OpenAIResponses
+        except ImportError as err:
+            raise ImportError("Agno OpenAI support requires `openai` package. Install with: pip install openai") from err
+        model = OpenAIResponses(id=model_id, temperature=0)
+        logger.info("Initialized Agno openai model for SRS extraction")
+
     agent = Agent(
         model=model,
         output_schema=SRSStructuredOutput,

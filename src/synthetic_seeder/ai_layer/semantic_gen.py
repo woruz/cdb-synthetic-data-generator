@@ -2,7 +2,9 @@
 
 import logging
 from typing import Any
-from synthetic_seeder.schema import NormalizedSchema, NormalizedField
+from pydantic import BaseModel, Field
+
+from synthetic_seeder.schema import NormalizedSchema
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +58,20 @@ Example: {{ "users.bio": ["Tech enthusiast...", "Artist and traveler..."], "prod
         logger.error("Agno OpenAI support not found.")
         return {}
 
-    agent = Agent(model=model, markdown=False, response_format={"type": "json_object"})
+    class _PoolsEnvelope(BaseModel):
+        __root__: dict[str, list[str]] = Field(default_factory=dict)
+    agent = Agent(model=model, markdown=False, output_schema=_PoolsEnvelope)
     
     try:
         response = agent.run(prompt)
-        import json
-        data = json.loads(response.content) if isinstance(response.content, str) else response.content
+        if isinstance(response.content, _PoolsEnvelope):
+            data = response.content.__root__
+        elif isinstance(getattr(response, "content", None), dict):
+            data = _PoolsEnvelope.model_validate(response.content).__root__
+        elif isinstance(getattr(response, "content", None), str):
+            data = _PoolsEnvelope.model_validate_json(response.content).__root__
+        else:
+            data = {}
         
         pools = {}
         for key, values in data.items():

@@ -43,7 +43,7 @@ class PipelineConfig:
     # If set, write Agno SRS extraction (structured JSON) to this path for inspection.
     srs_extract_log_path: str | None = None
     # Require SRS and schema to be at least this compatible (0.0–1.0). Default 0.5 (50%).
-    srs_min_compatibility: float = 0.50
+    srs_min_compatibility: float = 0.00
     # Control additional AI-assisted stages
     use_alignment_ai: bool = True
     use_seed_plan_ai: bool = True

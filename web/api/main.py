@@ -124,7 +124,7 @@ async def generate_seeder(req: GenerateRequest):
         raise HTTPException(404, f"Schema file not found: {req.schema_filename}")
 
     from synthetic_seeder.config import GeneratorConfig, PipelineConfig
-    from synthetic_seeder.pipeline import run_pipeline
+    from synthetic_seeder.pipeline.orchestrator import run_pipeline_two_step_ai
     from synthetic_seeder.schema import DatabaseType
 
     config = PipelineConfig(
@@ -135,6 +135,8 @@ async def generate_seeder(req: GenerateRequest):
             ai_rows_for_pool=req.ai_pool_size,
         ),
         srs_extract_log_path="logs/srs_extract.json",
+        llm_provider=req.llm_provider,
+        llm_model=req.llm_model,
     )
     schema_content = schema_path.read_text(encoding="utf-8", errors="replace")
     is_pdf = srs_path.suffix.lower() == ".pdf"
@@ -142,7 +144,7 @@ async def generate_seeder(req: GenerateRequest):
     srs_pdf_path = srs_path if is_pdf else None
 
     try:
-        schema, rows_by_table, seeder_content = run_pipeline(
+        schema, rows_by_table, seeder_content = run_pipeline_two_step_ai(
             schema_content,
             config,
             srs_text=srs_text,

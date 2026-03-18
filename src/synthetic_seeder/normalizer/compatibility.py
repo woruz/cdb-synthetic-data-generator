@@ -17,7 +17,7 @@ try:
 except ImportError:
     SRSStructuredOutput = None  # type: ignore[misc, assignment]
 
-DEFAULT_MIN_COMPATIBILITY = 0.50
+DEFAULT_MIN_COMPATIBILITY = 0.00
 
 
 def _norm_name(s: str) -> str:

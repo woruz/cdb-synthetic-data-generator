@@ -161,8 +161,9 @@ def _parse_table_block(block: str) -> TableDef | None:
             col_name = _norm(col_match.group(1))
             col_type = col_match.group(2)
             rest = col_match.group(3).upper()
-            nullable = "NOT NULL" not in rest
             is_pk = "PRIMARY KEY" in rest
+            # PRIMARY KEY implies NOT NULL even if not spelled out
+            nullable = ("NOT NULL" not in rest) and (not is_pk)
             is_auto = "SERIAL" in col_type.upper() or "BIGSERIAL" in col_type.upper()
             is_unique = "UNIQUE" in rest
             if is_pk:

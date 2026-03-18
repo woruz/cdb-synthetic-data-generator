@@ -57,14 +57,57 @@ def parse_length(sql_type: str) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def split_create_table_blocks(content: str, strip_prefix: str = r"^\s*(?:IF\s+NOT\s+EXISTS|OR\s+REPLACE)\s+") -> list[str]:
-    """Split content into per-table blocks (CREATE TABLE ...)."""
-    parts = re.split(r"\bCREATE\s+TABLE\s+", content, flags=re.IGNORECASE)
-    result = []
-    for p in parts[1:]:
-        rest = re.sub(strip_prefix, "", p, flags=re.IGNORECASE) if strip_prefix else p
-        end = re.search(r"\bCREATE\s+TABLE\s+", rest, re.IGNORECASE)
-        block = rest[: end.start()].strip() if end else rest.strip()
+def split_create_table_blocks(
+    content: str,
+    strip_prefix: str = r"^\s*(?:IF\s+NOT\s+EXISTS|OR\s+REPLACE)\s+",
+) -> list[str]:
+    """
+    Split content into per-table blocks for CREATE TABLE statements.
+
+    Returns blocks that start at the table identifier line (i.e. text immediately after
+    'CREATE TABLE') and include the full column/constraint body up to the matching ')'
+    (and trailing ';' if present).
+
+    This avoids accidentally including interleaved statements like 'CREATE TYPE ...'
+    between tables, which would otherwise be mis-parsed as columns (e.g. a bogus column
+    named 'CREATE').
+    """
+    if not content or not content.strip():
+        return []
+
+    create_iter = list(re.finditer(r"\bCREATE\s+TABLE\s+", content, flags=re.IGNORECASE))
+    if not create_iter:
+        return []
+
+    blocks: list[str] = []
+    for m in create_iter:
+        start = m.end()
+        rest = content[start:]
+        # Optionally strip dialect prefix like IF NOT EXISTS / OR REPLACE immediately after CREATE TABLE
+        if strip_prefix:
+            rest = re.sub(strip_prefix, "", rest, flags=re.IGNORECASE)
+        # Find first '(' which starts the table body
+        open_idx = rest.find("(")
+        if open_idx < 0:
+            continue
+        # Scan to matching ')'
+        depth = 0
+        end_idx = None
+        for i, ch in enumerate(rest[open_idx:], start=open_idx):
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    end_idx = i
+                    break
+        if end_idx is None:
+            continue
+        # Include trailing ';' if present
+        semi_idx = rest.find(";", end_idx)
+        slice_end = (semi_idx + 1) if semi_idx != -1 else (end_idx + 1)
+        block = rest[:slice_end].strip()
         if block:
-            result.append(block)
-    return result
+            blocks.append(block)
+
+    return blocks
